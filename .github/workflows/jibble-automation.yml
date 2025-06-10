@@ -1,0 +1,134 @@
+name: Jibble Automation - Scheduled Sign-in/Sign-out
+
+on:
+  schedule:
+    # Sign-in: Monday to Saturday at 9 AM IST (3:30 AM UTC)
+    - cron: '30 3 * * 1-6'
+    # Sign-out: Tuesday to Sunday at 3 AM IST (9:30 PM UTC previous day)
+    - cron: '30 21 * * 1-6'
+  workflow_dispatch:  # Allows manual execution
+
+jobs:
+  run-sign-in:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '30 3 * * 1-6' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Setup Chrome and ChromeDriver
+        run: |
+          # Update package list
+          sudo apt-get update
+          
+          # Install Chrome
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          
+          # Get Chrome version and install matching ChromeDriver
+          CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f3 | cut -d '.' -f1-3)
+          echo "Chrome version: $CHROME_VERSION"
+          
+          # Install ChromeDriver using Chrome for Testing
+          CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION")
+          echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+          
+          wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+          sudo unzip /tmp/chromedriver.zip -d /tmp/
+          sudo mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+          
+          # Verify installation
+          google-chrome --version
+          chromedriver --version
+
+      - name: Setup Virtual Display
+        run: |
+          sudo apt-get install -y xvfb
+          # Start Xvfb on display :99 with specific screen settings
+          sudo Xvfb :99 -ac -screen 0 1920x1080x24 > /dev/null 2>&1 &
+          # Wait a moment for Xvfb to start
+          sleep 2
+
+      - name: Run sign-in.py
+        env:
+          JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
+          JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
+          GITHUB_ACTIONS: true
+          DISPLAY: :99
+        run: python scripts/sign-in.py
+
+  run-sign-out:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '30 21 * * 1-6' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Setup Chrome and ChromeDriver
+        run: |
+          # Update package list
+          sudo apt-get update
+          
+          # Install Chrome
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          
+          # Get Chrome version and install matching ChromeDriver
+          CHROME_VERSION=$(google-chrome --version | cut -d ' ' -f3 | cut -d '.' -f1-3)
+          echo "Chrome version: $CHROME_VERSION"
+          
+          # Install ChromeDriver using Chrome for Testing
+          CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_VERSION")
+          echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+          
+          wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+          sudo unzip /tmp/chromedriver.zip -d /tmp/
+          sudo mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+          
+          # Verify installation
+          google-chrome --version
+          chromedriver --version
+
+      - name: Setup Virtual Display
+        run: |
+          sudo apt-get install -y xvfb
+          # Start Xvfb on display :99 with specific screen settings
+          sudo Xvfb :99 -ac -screen 0 1920x1080x24 > /dev/null 2>&1 &
+          # Wait a moment for Xvfb to start
+          sleep 2
+
+      - name: Run sign-out.py
+        env:
+          JIBBLE_EMAIL: ${{ secrets.JIBBLE_EMAIL }}
+          JIBBLE_PASSWORD: ${{ secrets.JIBBLE_PASSWORD }}
+          GITHUB_ACTIONS: true
+          DISPLAY: :99
+        run: python scripts/sign-out.py
