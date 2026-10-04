@@ -49,3 +49,7 @@ If the workflow fails:
 2. Verify that your GitHub Secrets are set correctly
 3. Ensure your Jibble credentials are valid
 4. Check if Jibble's UI has changed (element selectors may need updating)
+
+## Author
+
+[rajivranjanmars](https://rajivranjana.in)
